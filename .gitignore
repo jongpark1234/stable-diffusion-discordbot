@@ -1,0 +1,12 @@
+# cache
+__pycache__
+
+# output image file
+output.png
+
+# basic settings, configs, environment variables
+config.py
+user.json
+
+# model preview
+__model_preview
