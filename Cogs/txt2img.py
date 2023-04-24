@@ -15,7 +15,7 @@ is_drawing = False
 queue = deque()
 
 class txt2img(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     @discord.app_commands.command(name='txt2img')
@@ -26,7 +26,7 @@ class txt2img(commands.Cog):
         negative_prompt: str='EasyNegative, extra fingers, fewer fingers',
         width: discord.app_commands.Range[int, 64, 1024]=512,
         height: discord.app_commands.Range[int, 64, 1024]=768,
-        steps: discord.app_commands.Range[int, 1, 50]=28,
+        steps: discord.app_commands.Range[int, 1, 50]=40,
         seed: int=-1,
         hires_toggle: bool=True
     ):
@@ -37,17 +37,17 @@ class txt2img(commands.Cog):
         prompt: str
             AI에게 그려야 할 것을 알려주는 문자열 입니다.
         negative_prompt: str
-            AI에게 하지 말아야 할 것을 알려주는 문자열 입니다. 기본값 - (low quality, worst quality:1.4), easynegative ,badhandv4, badv3, nsfw
+            AI에게 하지 말아야 할 것을 알려주는 문자열 입니다. 기본값 - EasyNegative, extra fingers, fewer fingers
         width: int
             이미지의 너비 입니다. (width는 64에서 1024 사이의 정수여야 합니다.) 기본값 - 384
         height: int
             이미지의 높이 입니다. (height는 64에서 1024 사이의 정수여야 합니다.) 기본값 - 512
         steps: int
-            AI가 반복해서 그림을 그릴 횟수입니다 (steps는 1에서 50 사이의 정수여야 합니다.) 기본값 - 28
+            AI가 반복해서 그림을 그릴 횟수입니다. ( 기본값: 40 )
         seed : bool
-            이미지 생성의 시드값을 정합니다 기본값 - -1
+            이미지 생성의 시드값을 정합니다. ( 기본값: -1 ( random ) )
         hires_toggle : bool
-            hires_fix의 온오프 여부를 정합니다. 기본값 - True
+            hires_fix의 on/off 여부를 정합니다. ( 기본값: True )
         '''
         global is_drawing
         queued = False
@@ -67,7 +67,7 @@ class txt2img(commands.Cog):
             'enable_hr': hires_toggle,
             'denoising_strength': 0.4,
             'hr_scale': 2,
-            'hr_second_pass_steps': 12,
+            'hr_second_pass_steps': 20,
             'firstphase_width': 0,
             'firstphase_height': 0,
             'hr_upscaler': "4x-AnimeSharp",
@@ -84,20 +84,19 @@ class txt2img(commands.Cog):
         json_data = {}
         with open(JSONPATH, 'r') as json_file:
             json_data = json.load(json_file)
-        userCount = len(json_data['users'])
 
         override_settings = {}
-        for i in range(userCount):
-            if interaction.user.id == json_data['users'][i]['userid']:
-                override_settings['sd_model_checkpoint'] = json_data['users'][i]['model']
-                override_payload = { 'override_settings': override_settings}
+        for user in json_data['users']:
+            if interaction.user.id == user['userid']:
+                override_settings['sd_model_checkpoint'] = user['model']
+                override_payload = { 'override_settings': override_settings }
                 payload.update(override_payload)
                 break
                 
         if queued == interaction.id:
-            await interaction.edit_original_response(content = f"그림 그리는 중..")
+            await interaction.edit_original_response(content = "그림 그리는 중..")
         else:
-            await interaction.response.send_message(f"그림 그리는 중..")
+            await interaction.response.send_message("그림 그리는 중..")
 
         async def getimg():
             global response, getimg_result
@@ -115,7 +114,7 @@ class txt2img(commands.Cog):
                 if percent == 100:
                     await interaction.edit_original_response(content=f"그림 가져오는 중..")
                 else:
-                    await interaction.edit_original_response(content=f'그림 그리는 중.. **[ {percent}% | 예상 시간 : {eta:.1f}초 ]**')
+                    await interaction.edit_original_response(content=f'`[{"#" * (percent // 5)}{"." * (20 - percent // 5)}]` **[ {percent}% | 예상 시간 : {eta:.1f}초 ]**')
 
                 await asyncio.sleep(0.1)
 
@@ -125,8 +124,10 @@ class txt2img(commands.Cog):
         async def process():
             global getimg_result
             getimg_result = False
-            await asyncio.create_task(getimg())
-            await asyncio.create_task(loop())
+            getImage = asyncio.create_task(getimg())
+            displayRemainTime = asyncio.create_task(loop())
+            await getImage
+            await displayRemainTime
             return
         
         await process()

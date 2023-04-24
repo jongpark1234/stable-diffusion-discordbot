@@ -17,7 +17,8 @@ class DavidChoi(commands.Bot):
             'Cogs.memory',
             'Cogs.get-options',
             'Cogs.set-model',
-            'Cogs.txt2img'
+            'Cogs.get-queue',
+            'Cogs.txt2img',
         ]
         
     async def setup_hook(self):

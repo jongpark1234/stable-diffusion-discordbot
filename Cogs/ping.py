@@ -3,7 +3,7 @@ from discord.ext import commands
 from config import *
 
 class ping(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     @discord.app_commands.command(name='ping')

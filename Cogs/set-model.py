@@ -13,13 +13,12 @@ class ButtonView(discord.ui.View):
         super().__init__()
 
 class set_model(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     @discord.app_commands.command(name="set-model")
-    async def set_model(self, interaction: discord.Interaction) -> None:
-        """Change Model.
-        """ 
+    async def set_model(self, interaction: discord.Interaction):
+        '''Change Model.'''
         global curPage, is_selected
         is_selected[interaction.user.id] = False
         modelList = json.loads(requests.get(url=f'{APIURL}/sdapi/v1/sd-models').text)
@@ -32,7 +31,7 @@ class set_model(commands.Cog):
                 discord.SelectOption(
                     label=f'{modelList[i]["model_name"]}',
                     description=f'{modelList[i]["hash"]}'
-                ) for i in range((curPage - 1) * 25, min(curPage * 25, modelCount - 1)) # available maxValue is modelCount.
+                ) for i in range((curPage - 1) * 25, min(curPage * 25, modelCount)) # available maxValue is modelCount.
             ]
 
 
@@ -44,16 +43,16 @@ class set_model(commands.Cog):
         approve = Button(label='✅', style=ButtonStyle.green)
         cancel = Button(label='X', style=ButtonStyle.red)
         
-        async def select_callback(interaction : discord.Interaction) -> None:
+        async def select_callback(interaction : discord.Interaction):
             global is_selected
             is_selected[interaction.user.id] = ''.join(selects.values)
             embed=discord.Embed(title=f"{is_selected[interaction.user.id]}", color=0x4fff4a)
             embed.set_author(name=f'{is_selected[interaction.user.id]} 모델로 바꿀까요?')
             embed.set_footer(text='@DavidChoi#6516')
             try:
-                res = discord.File(f".\\__model_preview\\{is_selected[interaction.user.id]}.png", filename=f"{is_selected[interaction.user.id]}.png")
+                res = discord.File(f"{MODELPATH}\\{is_selected[interaction.user.id]}.png", filename=f"{is_selected[interaction.user.id]}.png")
                 embed.set_image(url=f"attachment://{is_selected[interaction.user.id]}.png")
-                await interaction.response.edit_message(view=view_make(), embed=embed ,attachments=[res])
+                await interaction.response.edit_message(view=view_make(), embed=embed, attachments=[res])
             except:
                 await interaction.response.edit_message(view=view_make(), embed=embed)
 
@@ -88,12 +87,10 @@ class set_model(commands.Cog):
                     json_data['users'][i]['model'] = is_selected[interaction.user.id]
                     break
             else:
-                json_data['users'].append(
-                    {
-                        'userid': interaction.user.id,
-                        'model': is_selected[interaction.user.id]
-                    }
-                )
+                json_data['users'].append({
+                    'userid': interaction.user.id,
+                    'model': is_selected[interaction.user.id]
+                })
             
             with open(JSONPATH, 'w') as outfile:
                 json.dump(json_data, outfile, indent=4)
@@ -134,7 +131,7 @@ class set_model(commands.Cog):
         await interaction.response.send_message(embed=embed, view=view_make())
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: commands.Bot):
     await bot.add_cog(
         set_model(bot),
         guilds=GUILDLIST
