@@ -23,7 +23,7 @@ class set_model(commands.Cog):
         is_selected[interaction.user.id] = False
         modelList = json.loads(requests.get(url=f'{APIURL}/sdapi/v1/sd-models').text)
         modelCount = len(modelList)
-        page_lim = math.ceil(modelCount / 25)
+        pageLimit = math.ceil(modelCount / 25)
         curPage = 1
         
         def generateSelector():
@@ -39,7 +39,7 @@ class set_model(commands.Cog):
         selects = Select(options=generateSelector())
         left = Button(label='<<', style=ButtonStyle.primary)
         right = Button(label='>>', style=ButtonStyle.primary)
-        page = Button(label = f'{curPage}/{page_lim}', style=ButtonStyle.grey, disabled=True)
+        page = Button(label = f'{curPage}/{pageLimit}', style=ButtonStyle.grey, disabled=True)
         approve = Button(label='✅', style=ButtonStyle.green)
         cancel = Button(label='X', style=ButtonStyle.red)
         
@@ -56,7 +56,6 @@ class set_model(commands.Cog):
             except:
                 await interaction.response.edit_message(view=view_make(), embed=embed)
 
-
         async def left_callback(interaction: discord.Interaction):
             global curPage
             curPage = max(curPage - 1, 1)
@@ -64,7 +63,7 @@ class set_model(commands.Cog):
 
         async def right_callback(interaction: discord.Interaction):
             global curPage
-            curPage = min(curPage + 1, page_lim)
+            curPage = min(curPage + 1, pageLimit)
             await interaction.response.edit_message(view=view_make())
 
         async def page_callback(interaction: discord.Interaction):
@@ -77,9 +76,7 @@ class set_model(commands.Cog):
             embed.set_footer(text='@DavidChoi#6516')
             await interaction.response.edit_message(embed=embed,view=View(),attachments=[])
 
-            json_data = {}
-            with open(JSONPATH, "r") as json_file:
-                json_data = json.load(json_file)
+            json_data = json.load(open(JSONPATH, 'r'))
             user_cnt = len(json_data['users'])
 
             for i in range(user_cnt):
@@ -111,19 +108,18 @@ class set_model(commands.Cog):
         cancel.callback = cancel_callback
 
         def view_make():
-            left.disabled = curPage == 1
-            right.disabled = curPage == page_lim
-            approve.disabled = is_selected[interaction.user.id] == False
-            page.label = f'{curPage} / {page_lim}'
-
             view = View()
+
+            left.disabled = curPage == 1
+            right.disabled = curPage == pageLimit
+            approve.disabled = is_selected[interaction.user.id] == False
+            page.label = f'{curPage} / {pageLimit}'
+
             selects.options = generateSelector()
-            view.add_item(selects)
-            view.add_item(left)
-            view.add_item(page)
-            view.add_item(right)
-            view.add_item(approve)
-            view.add_item(cancel)
+
+            for ui in [selects, left, page, right, approve, cancel]:
+                view.add_item(ui)
+                
             return view
 
         embed=discord.Embed(title=f"아래 선택 메뉴에서 모델을 골라 주세요", color=0x777777)

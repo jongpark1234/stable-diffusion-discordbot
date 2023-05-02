@@ -10,14 +10,14 @@ import asyncio
 
 from config import *
 
-getimg_result = False
-is_drawing = False
-queue = deque()
-
 class txt2img(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-
+        self.imgSuccess = False
+        self.isDrawing = False
+        self.queue = deque()
+        self.imgResult: requests.Response = None
+    
     @discord.app_commands.command(name='txt2img')
     async def txt2img(
         self,
@@ -49,20 +49,6 @@ class txt2img(commands.Cog):
         hires_toggle : bool
             hires_fix의 on/off 여부를 정합니다. ( 기본값: True )
         '''
-        global is_drawing
-        queued = False
-        if is_drawing:
-            await interaction.response.send_message(f"In Queue...")
-            queue.append(interaction.id)
-            queued = interaction.id
-            while True:
-                if not is_drawing and queue[0] == interaction.id:
-                    queue.popleft()
-                    break
-                await interaction.edit_original_response(content = f"In Queue... **[ Waiting Order : {queue.index(interaction.id) + 1} ]**")
-                await asyncio.sleep(1)
-        is_drawing = True
-    
         payload = {
             'enable_hr': hires_toggle,
             'denoising_strength': 0.4,
@@ -81,80 +67,90 @@ class txt2img(commands.Cog):
             'cfg_scale': 7,
             'seed': seed,
         }
-        json_data = {}
-        with open(JSONPATH, 'r') as json_file:
-            json_data = json.load(json_file)
-
-        override_settings = {}
-        for user in json_data['users']:
-            if interaction.user.id == user['userid']:
-                override_settings['sd_model_checkpoint'] = user['model']
-                override_payload = { 'override_settings': override_settings }
-                payload.update(override_payload)
-                break
+        
+        async def loadModel():
+            for user in json.load(open(JSONPATH, 'r'))['users']:
+                if interaction.user.id == user['userid']:
+                    payload.update({
+                        'override_settings': {
+                            'sd_model_checkpoint': user['model']
+                        }
+                    })
+                    return True
+            await interaction.response.send_message('/set-model')
+            return False
+     
+        async def waiting():
+            if self.isDrawing: # If drawing something else
+                await interaction.response.send_message('In Queue...')
+                self.queue.append(interaction.id)
+                while True:
+                    if not self.isDrawing and self.queue[0] == interaction.id: # If no other picture is drawn and I'm at the top of the queue
+                        self.queue.popleft() # Exporting oneself from the queue
+                        break # Stop waiting
+                    await interaction.edit_original_response(content=f'In Queue... [ Waiting Order : {self.queue.index(interaction.id) + 1} ]')
+                    asyncio.sleep(1)
+            self.isDrawing = True # Drawing weather turn on
                 
-        if queued == interaction.id:
-            await interaction.edit_original_response(content = "그림 그리는 중..")
-        else:
-            await interaction.response.send_message("그림 그리는 중..")
-
-        async def getimg():
-            global response, getimg_result
-            await asyncio.sleep(1)
-            response = await asyncio.to_thread(requests.post, url=f'{APIURL}/sdapi/v1/txt2img', json=payload)
-            getimg_result = True
-            return
-
-        async def loop():
-            while not getimg_result: # Persistent until all images are received
-                progress = json.loads(requests.get(url=f'{APIURL}/sdapi/v1/progress').text)
-                percent = round(progress['progress'] * 100) # Progress Percent
-                eta = max(progress['eta_relative'], 0) # Remaining time ( Guess )
-
-                if percent == 100:
-                    await interaction.edit_original_response(content=f"그림 가져오는 중..")
-                else:
-                    await interaction.edit_original_response(content=f'`[{"#" * (percent // 5)}{"." * (20 - percent // 5)}]` **[ {percent}% | 예상 시간 : {eta:.1f}초 ]**')
-
-                await asyncio.sleep(0.1)
-
-            await interaction.edit_original_response(content='그림 완성!')
-            return
-
         async def process():
-            global getimg_result
-            getimg_result = False
+            async def getimg():
+                """The Function that get Image from Webui API"""
+                await asyncio.sleep(1)
+                self.imgResult = await asyncio.to_thread(requests.post, url=f'{APIURL}/sdapi/v1/txt2img', json=payload)
+                self.imgSuccess = True
+            async def progress():
+                while not self.imgSuccess: # Persistent until all images are received
+                    progress = json.loads(requests.get(url=f'{APIURL}/sdapi/v1/progress').text)
+                    percent = round(progress['progress'] * 100) # Progress Percent
+                    eta = max(progress['eta_relative'], 0) # Remaining time ( Guess )
+
+                    await interaction.edit_original_response(content=f'`[{"#" * (percent // 5)}{"." * (20 - percent // 5)}]` **[ {percent}% | 예상 시간 : {eta:.1f}s  ]**')
+                    await asyncio.sleep(0.1)
+
+                await interaction.edit_original_response(content='그림 완성!')
+            
             getImage = asyncio.create_task(getimg())
-            displayRemainTime = asyncio.create_task(loop())
+            displayProgress = asyncio.create_task(progress())
             await getImage
-            await displayRemainTime
+            await displayProgress
+            
+        async def saveImage():
+            for i in self.imgResult.json()['images']:
+                image = Image.open(io.BytesIO(base64.b64decode(i.split(',', 1)[0])))
+
+                png_info = requests.post(url=f'{APIURL}/sdapi/v1/png-info', json={
+                    'image': f'data:image/png;base64,{i}'
+                }).json().get('info')
+
+                image.save('output.png', pnginfo=PngImagePlugin.PngInfo().add_text('parameters', png_info))
+
+
+        if not await loadModel():
+            interaction.response.send_message('/set-model please.')
             return
-        
+        await interaction.response.send_message(f"그림 그리는 중..")               
+        await waiting()
         await process()
-        
+        await saveImage()
 
-        for i in response.json()['images']:
-            image = Image.open(io.BytesIO(base64.b64decode(i.split(',', 1)[0])))
-
-            png_payload = {
-                'image': f'data:image/png;base64,{i}'
-            }
-
-            response2 = requests.post(url=f'{APIURL}/sdapi/v1/png-info', json=png_payload)
-
-            pnginfo = PngImagePlugin.PngInfo()
-            pnginfo.add_text("parameters", response2.json().get('info'))
-            image.save('output.png', pnginfo=pnginfo)
     
         res = discord.File(OUTPUTPATH, filename='output.png')
-        embed=discord.Embed(title=f"@{interaction.user.name}", color=0x4fff4a)
-        embed.set_author(name="✅ 텍스트 -> 이미지")
-        embed.set_image(url="attachment://output.png")
-        embed.add_field(name="Positive Prompt", value=prompt, inline=False)
-        embed.add_field(name="Negative Prompt", value=negative_prompt, inline=False)
-        embed.set_footer(text="@DavidChoi#6516")
-        await interaction.edit_original_response(embed=embed,attachments=[res])
-        is_drawing = False
+        embed=discord.Embed(
+            title=f"@{interaction.user.name}", color=0x4fff4a
+        ).set_author(
+            name='✅ 텍스트 -> 이미지'
+        ).set_image(
+            url="attachment://output.png"
+        ).add_field(
+            name="Positive Prompt", value=prompt, inline=False
+        ).add_field(
+            name="Negative Prompt", value=negative_prompt, inline=False
+        ).set_footer(
+            text="@DavidChoi#6516"
+        )
+        await interaction.edit_original_response(embed=embed, attachments=[res])
+
+        self.isDrawing = False
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(
