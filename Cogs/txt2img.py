@@ -23,7 +23,7 @@ class txt2img(commands.Cog):
         self,
         interaction: discord.Interaction,
         prompt: str,
-        negative_prompt: str='EasyNegative, extra fingers, fewer fingers',
+        negative_prompt: str='EasyNegative, extra fingers, fewer fingers, NSFW',
         width: discord.app_commands.Range[int, 64, 1024]=512,
         height: discord.app_commands.Range[int, 64, 1024]=768,
         steps: discord.app_commands.Range[int, 1, 50]=40,
@@ -77,7 +77,6 @@ class txt2img(commands.Cog):
                         }
                     })
                     return True
-            await interaction.response.send_message('/set-model')
             return False
      
         async def waiting():
@@ -94,7 +93,7 @@ class txt2img(commands.Cog):
                 
         async def process():
             async def getimg():
-                """The Function that get Image from Webui API"""
+                '''The Function that get Image from Webui API'''
                 await asyncio.sleep(1)
                 self.imgResult = await asyncio.to_thread(requests.post, url=f'{APIURL}/sdapi/v1/txt2img', json=payload)
                 self.imgSuccess = True
@@ -108,7 +107,7 @@ class txt2img(commands.Cog):
                     await asyncio.sleep(0.1)
 
                 await interaction.edit_original_response(content='그림 완성!')
-            
+            self.imgSuccess = False
             getImage = asyncio.create_task(getimg())
             displayProgress = asyncio.create_task(progress())
             await getImage
@@ -118,37 +117,51 @@ class txt2img(commands.Cog):
             for i in self.imgResult.json()['images']:
                 image = Image.open(io.BytesIO(base64.b64decode(i.split(',', 1)[0])))
 
-                png_info = requests.post(url=f'{APIURL}/sdapi/v1/png-info', json={
-                    'image': f'data:image/png;base64,{i}'
-                }).json().get('info')
+                png_info = requests.post(
+                    url=f'{APIURL}/sdapi/v1/png-info',
+                    json={
+                        'image': f'data:image/png;base64,{i}'
+                    }
+                ).json().get('info')
 
-                image.save('output.png', pnginfo=PngImagePlugin.PngInfo().add_text('parameters', png_info))
+                image.save(
+                    'output.png',
+                    pnginfo=PngImagePlugin.PngInfo().add_text(
+                        key='parameters',
+                        value=png_info
+                    )
+                )
 
 
         if not await loadModel():
             interaction.response.send_message('/set-model please.')
             return
-        await interaction.response.send_message(f"그림 그리는 중..")               
+        await interaction.response.send_message('대기중..')               
         await waiting()
         await process()
         await saveImage()
 
     
-        res = discord.File(OUTPUTPATH, filename='output.png')
         embed=discord.Embed(
             title=f"@{interaction.user.name}", color=0x4fff4a
         ).set_author(
             name='✅ 텍스트 -> 이미지'
         ).set_image(
-            url="attachment://output.png"
+            url='attachment://output.png'
         ).add_field(
-            name="Positive Prompt", value=prompt, inline=False
+            name='Positive Prompt', value=prompt, inline=False
         ).add_field(
-            name="Negative Prompt", value=negative_prompt, inline=False
+            name='Negative Prompt', value=negative_prompt, inline=False
         ).set_footer(
-            text="@DavidChoi#6516"
+            text='@DavidChoi#6516'
         )
-        await interaction.edit_original_response(embed=embed, attachments=[res])
+
+        await interaction.edit_original_response(
+            embed=embed,
+            attachments=[
+                discord.File(OUTPUTPATH, filename='output.png')
+            ]
+        )
 
         self.isDrawing = False
 
