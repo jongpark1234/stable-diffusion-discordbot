@@ -80,23 +80,25 @@ class txt2img(commands.Cog):
             return False
      
         async def waiting():
+            await interaction.response.send_message('대기중..')
             if self.isDrawing: # If drawing something else
-                await interaction.response.send_message('In Queue...')
                 self.queue.append(interaction.id)
                 while True:
                     if not self.isDrawing and self.queue[0] == interaction.id: # If no other picture is drawn and I'm at the top of the queue
                         self.queue.popleft() # Exporting oneself from the queue
                         break # Stop waiting
-                    await interaction.edit_original_response(content=f'In Queue... [ Waiting Order : {self.queue.index(interaction.id) + 1} ]')
-                    asyncio.sleep(1)
+                    await interaction.edit_original_response(content=f'In Queue... **[ Waiting Order : {self.queue.index(interaction.id) + 1} ]**')
+                    await asyncio.sleep(1)
             self.isDrawing = True # Drawing weather turn on
-                
+
         async def process():
+
             async def getimg():
                 '''The Function that get Image from Webui API'''
                 await asyncio.sleep(1)
                 self.imgResult = await asyncio.to_thread(requests.post, url=f'{APIURL}/sdapi/v1/txt2img', json=payload)
                 self.imgSuccess = True
+
             async def progress():
                 while not self.imgSuccess: # Persistent until all images are received
                     progress = json.loads(requests.get(url=f'{APIURL}/sdapi/v1/progress').text)
@@ -107,6 +109,7 @@ class txt2img(commands.Cog):
                     await asyncio.sleep(0.1)
 
                 await interaction.edit_original_response(content='그림 완성!')
+
             self.imgSuccess = False
             getImage = asyncio.create_task(getimg())
             displayProgress = asyncio.create_task(progress())
@@ -122,46 +125,46 @@ class txt2img(commands.Cog):
                     json={
                         'image': f'data:image/png;base64,{i}'
                     }
-                ).json().get('info')
+                ).json()
 
                 image.save(
                     'output.png',
                     pnginfo=PngImagePlugin.PngInfo().add_text(
                         key='parameters',
-                        value=png_info
+                        value=png_info.get('info')
                     )
                 )
 
+            return png_info['info'].split('\n')[2]
+
+        async def sendImage(exif: list[str]):
+            embed=discord.Embed(
+                title=f"@{interaction.user.name}", color=0x4fff4a
+            ).set_author(
+                name='✅ 텍스트 -> 이미지'
+            ).set_image(
+                url='attachment://output.png'
+            ).add_field(
+                name='Positive Prompt', value=prompt, inline=False
+            ).add_field(
+                name='Negative Prompt', value=negative_prompt, inline=False
+            ).set_footer(
+                text=exif
+            )
+
+            await interaction.edit_original_response(
+                embed=embed,
+                attachments=[
+                    discord.File(OUTPUTPATH, filename='output.png')
+                ]
+            )
 
         if not await loadModel():
-            interaction.response.send_message('/set-model please.')
+            await interaction.response.send_message('/set-model please.')
             return
-        await interaction.response.send_message('대기중..')               
         await waiting()
         await process()
-        await saveImage()
-
-    
-        embed=discord.Embed(
-            title=f"@{interaction.user.name}", color=0x4fff4a
-        ).set_author(
-            name='✅ 텍스트 -> 이미지'
-        ).set_image(
-            url='attachment://output.png'
-        ).add_field(
-            name='Positive Prompt', value=prompt, inline=False
-        ).add_field(
-            name='Negative Prompt', value=negative_prompt, inline=False
-        ).set_footer(
-            text='@DavidChoi#6516'
-        )
-
-        await interaction.edit_original_response(
-            embed=embed,
-            attachments=[
-                discord.File(OUTPUTPATH, filename='output.png')
-            ]
-        )
+        await sendImage(await saveImage())
 
         self.isDrawing = False
 

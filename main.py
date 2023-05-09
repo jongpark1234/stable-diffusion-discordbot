@@ -16,7 +16,7 @@ class DavidChoi(commands.Bot):
             'Cogs.ping',
             'Cogs.memory',
             'Cogs.get-options',
-            'Cogs.set-model',
+            'Cogs.set_model',
             'Cogs.lora',
             'Cogs.txt2img',
             'Cogs.test'

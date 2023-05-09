@@ -14,7 +14,6 @@ class memory(commands.Cog):
     async def memory(self, interaction: discord.Interaction):
         '''현재 서버 컴퓨터의 RAM과 VRAM 사용량을 알려 줍니다.'''
 
-        print(os.popen('wmic path win32_VideoController get name').read())
         data = json.loads(requests.get(url=f'{APIURL}/sdapi/v1/memory').text)
         await interaction.response.send_message(
             f'''
