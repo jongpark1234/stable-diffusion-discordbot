@@ -8,15 +8,12 @@ import math
 from config import *
 
 is_selected = {}
-class ButtonView(discord.ui.View):
-    def __init__(self):
-        super().__init__()
 
 class set_model(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @discord.app_commands.command(name="set-model")
+    @discord.app_commands.command(name='set-model')
     async def set_model(self, interaction: discord.Interaction):
         '''Change Model.'''
         global curPage, is_selected
@@ -72,9 +69,9 @@ class set_model(commands.Cog):
             await interaction.response.edit_message(content='Todo: 페이지 한번에 이동하기', view=view_make())
 
         async def approve_callback(interaction: discord.Interaction):
-            embed=discord.Embed(title=f'**{is_selected[interaction.user.id]}** 모델로 설정합니다.', color=0x777777)
+            embed = discord.Embed(title=f'**{is_selected[interaction.user.id]}** 모델로 설정합니다.', color=0x777777)
             embed.set_footer(text='@DavidChoi#6516')
-            await interaction.response.edit_message(embed=embed,view=View(),attachments=[])
+            await interaction.response.edit_message(embed=embed, view=View(), attachments=[])
 
             json_data = json.load(open(JSONPATH, 'r'))
             user_cnt = len(json_data['users'])
@@ -91,14 +88,14 @@ class set_model(commands.Cog):
             
             with open(JSONPATH, 'w') as outfile:
                 json.dump(json_data, outfile, indent=4)
-            embed.title = f"**{is_selected[interaction.user.id]}** 모델로 설정했어요!"
+            embed.title = f'**{is_selected[interaction.user.id]}** 모델로 설정했어요!'
             is_selected.pop(interaction.user.id)
             await interaction.edit_original_response(embed=embed)
 
         async def cancel_callback(interaction : discord.Interaction):
             embed=discord.Embed(title=f"모델 변경을 취소했어요.", color=0xca474c)
             embed.set_footer(text='@DavidChoi#6516')
-            await interaction.response.edit_message(view=View() , embed=embed ,attachments=[])
+            await interaction.response.edit_message(view=View(), embed=embed, attachments=[])
 
         selects.callback = select_callback
         left.callback = left_callback

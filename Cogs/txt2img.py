@@ -1,21 +1,24 @@
 import discord
 from discord.ext import commands
-from collections import deque
+from discord.ui import Button, View
 from PIL import Image, PngImagePlugin
 import json
 import requests
 import io
 import base64
 import asyncio
+import datetime
 
 from config import *
+from Functions.edit_message import edit_message
+from Functions.send_message import send_message
+import Variables.queue as Q
 
 class txt2img(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.imgSuccess = False
         self.isDrawing = False
-        self.queue = deque()
         self.imgResult: requests.Response = None
     
     @discord.app_commands.command(name='txt2img')
@@ -67,7 +70,6 @@ class txt2img(commands.Cog):
             'cfg_scale': 7,
             'seed': seed,
         }
-        
         async def loadModel():
             for user in json.load(open(JSONPATH, 'r'))['users']:
                 if interaction.user.id == user['userid']:
@@ -80,14 +82,16 @@ class txt2img(commands.Cog):
             return False
      
         async def waiting():
-            await interaction.response.send_message('대기중..')
             if self.isDrawing: # If drawing something else
-                self.queue.append(interaction.id)
+                Q.queue.append(interaction.id)
                 while True:
-                    if not self.isDrawing and self.queue[0] == interaction.id: # If no other picture is drawn and I'm at the top of the queue
-                        self.queue.popleft() # Exporting oneself from the queue
+                    if not self.isDrawing and Q.queue[0] == interaction.id: # If no other picture is drawn and I'm at the top of the queue
+                        Q.queue.popleft() # Exporting oneself from the queue
                         break # Stop waiting
-                    await interaction.edit_original_response(content=f'In Queue... **[ Waiting Order : {self.queue.index(interaction.id) + 1} ]**')
+                    await edit_message(
+                        interaction=interaction,
+                        content=f'In Queue... **[ Waiting Order : {Q.queue.index(interaction.id) + 1} ]**'
+                    )
                     await asyncio.sleep(1)
             self.isDrawing = True # Drawing weather turn on
 
@@ -105,10 +109,16 @@ class txt2img(commands.Cog):
                     percent = round(progress['progress'] * 100) # Progress Percent
                     eta = max(progress['eta_relative'], 0) # Remaining time ( Guess )
 
-                    await interaction.edit_original_response(content=f'`[{"#" * (percent // 5)}{"." * (20 - percent // 5)}]` **[ {percent}% | 예상 시간 : {eta:.1f}s  ]**')
-                    await asyncio.sleep(0.1)
+                    await edit_message(
+                        interaction=interaction,
+                        content=f'`[{"#" * (percent // 5)}{"." * (20 - percent // 5)}]` **[ {percent}% | 예상 시간 : {eta:.1f}s  ]**'
+                    )
+                    await asyncio.sleep(0.5)
 
-                await interaction.edit_original_response(content='그림 완성!')
+                await edit_message(
+                    interaction=interaction,
+                    content='그림 완성!'
+                )
 
             self.imgSuccess = False
             getImage = asyncio.create_task(getimg())
@@ -138,12 +148,19 @@ class txt2img(commands.Cog):
             return png_info['info'].split('\n')[2]
 
         async def sendImage(exif: list[str]):
+            # Time Parsing for Filename
+            time = str(datetime.datetime.now()).split()
+            year, month, day = time[0].split('-')
+            hour, minute, second = time[1].split('.')[0].split(':')
+
+            imageName = year + month + day + hour + minute + second + '.png'
+
             embed=discord.Embed(
                 title=f"@{interaction.user.name}", color=0x4fff4a
             ).set_author(
                 name='✅ 텍스트 -> 이미지'
             ).set_image(
-                url='attachment://output.png'
+                url=f'attachment://{imageName}'
             ).add_field(
                 name='Positive Prompt', value=prompt, inline=False
             ).add_field(
@@ -152,15 +169,42 @@ class txt2img(commands.Cog):
                 text=exif
             )
 
-            await interaction.edit_original_response(
+            # Embed delete button Part
+            async def deleteCallback(interaction: discord.Interaction): # Callback function of Delete button
+                while True:
+                    try:
+                        await interaction.response.edit_message(
+                            embed=discord.Embed(title='그림이 삭제되었습니다.', color=0xff0000).set_footer(f'deleted by {interaction.user.name}'),
+                            attachments=[],
+                            view=View()
+                        )
+                        break
+                    except Exception as err:
+                        print(err)
+                    asyncio.sleep(0.5)
+
+            delete = Button(label='X', style=discord.ButtonStyle.red) # Delete button
+            delete.callback = deleteCallback # Define Callback function of Delete button
+
+            view = View()
+            view.add_item(delete)
+
+            await edit_message(
+                interaction=interaction,
                 embed=embed,
                 attachments=[
-                    discord.File(OUTPUTPATH, filename='output.png')
-                ]
+                    discord.File(OUTPUTPATH, filename=imageName)
+                ],
+                view=view
             )
 
-        if not await loadModel():
-            await interaction.response.send_message('/set-model please.')
+        if not await loadModel(): # Load a model.
+            await send_message(
+                interaction=interaction,
+                content='/set-model please.'
+            )
+            return
+        if not await send_message(interaction=interaction, content='대기중..'):
             return
         await waiting()
         await process()

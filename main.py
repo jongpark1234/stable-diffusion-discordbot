@@ -33,7 +33,7 @@ class DavidChoi(commands.Bot):
         print(f'bot name : {self.user.name}')
         print(f'bot id : {self.user.id}')
         print('---------------')
-        activity = discord.Game("그림 그리기")
+        activity = discord.Game('그림 그리기')
         await self.change_presence(status=discord.Status.online, activity=activity)
 
 bot = DavidChoi()
