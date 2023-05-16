@@ -174,7 +174,7 @@ class txt2img(commands.Cog):
                 while True:
                     try:
                         await interaction.response.edit_message(
-                            embed=discord.Embed(title='그림이 삭제되었습니다.', color=0xff0000).set_footer(f'deleted by {interaction.user.name}'),
+                            embed=discord.Embed(title='그림이 삭제되었습니다.', color=0xff0000).set_footer(text=f'deleted by {interaction.user.name}'),
                             attachments=[],
                             view=View()
                         )
