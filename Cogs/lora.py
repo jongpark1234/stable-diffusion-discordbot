@@ -5,6 +5,7 @@ import math
 import os
 
 from config import *
+from Functions.edit_message import edit_message
 
 class lora(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -30,7 +31,7 @@ class lora(commands.Cog):
         right = Button(label='>>', style=discord.ButtonStyle.primary) # Page right button
         page = Button(label=f'{self.curPage}/{pageLimit}', style=discord.ButtonStyle.grey, disabled=True) # Showing page button
 
-        async def select_callback(interaction : discord.Interaction):
+        async def select_callback(interaction: discord.Interaction):
             selected = ''.join(selects.values) # Currently selected option
             loraName = selected.split('.')[0] # Selected lora's name
             loraCoverPath = f'{LORAPATH}\\{loraName}.png' # Cover path of selected lora

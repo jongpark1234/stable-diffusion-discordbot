@@ -10,7 +10,7 @@ import asyncio
 import datetime
 
 from config import *
-from Functions.edit_message import edit_message
+from Functions.edit_original_response import edit_original_response
 from Functions.send_message import send_message
 import Variables.queue as Q
 
@@ -88,7 +88,7 @@ class txt2img(commands.Cog):
                     if not self.isDrawing and Q.queue[0] == interaction.id: # If no other picture is drawn and I'm at the top of the queue
                         Q.queue.popleft() # Exporting oneself from the queue
                         break # Stop waiting
-                    await edit_message(
+                    await edit_original_response(
                         interaction=interaction,
                         content=f'In Queue... **[ Waiting Order : {Q.queue.index(interaction.id) + 1} ]**'
                     )
@@ -109,13 +109,13 @@ class txt2img(commands.Cog):
                     percent = round(progress['progress'] * 100) # Progress Percent
                     eta = max(progress['eta_relative'], 0) # Remaining time ( Guess )
 
-                    await edit_message(
+                    await edit_original_response(
                         interaction=interaction,
                         content=f'`[{"#" * (percent // 5)}{"." * (20 - percent // 5)}]` **[ {percent}% | 예상 시간 : {eta:.1f}s  ]**'
                     )
                     await asyncio.sleep(0.5)
 
-                await edit_message(
+                await edit_original_response(
                     interaction=interaction,
                     content='그림 완성!'
                 )
@@ -169,7 +169,7 @@ class txt2img(commands.Cog):
                 text=exif
             )
 
-            # Embed delete button Part
+            ############ Embed delete button Part
             async def deleteCallback(interaction: discord.Interaction): # Callback function of Delete button
                 while True:
                     try:
@@ -185,11 +185,12 @@ class txt2img(commands.Cog):
 
             delete = Button(label='X', style=discord.ButtonStyle.red) # Delete button
             delete.callback = deleteCallback # Define Callback function of Delete button
+            ############
 
             view = View()
             view.add_item(delete)
 
-            await edit_message(
+            await edit_original_response(
                 interaction=interaction,
                 embed=embed,
                 attachments=[
