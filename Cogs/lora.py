@@ -6,6 +6,7 @@ import os
 
 from config import *
 from Functions.edit_message import edit_message
+from Functions.send_message import send_message
 
 class lora(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -47,20 +48,38 @@ class lora(commands.Cog):
             if os.path.exists(loraCoverPath): # If there's Lora cover
                 attach = discord.File(fp=loraCoverPath, filename=f'{loraName}.png')
                 embed.set_image(url=f'attachment://{loraName}.png')
-                await interaction.response.edit_message(view=view_make(), embed=embed, attachments=[attach])
+                await edit_message(
+                    interaction=interaction,
+                    view=view_make(),
+                    embed=embed,
+                    attachments=[attach]
+                )
             else: # If there's not Lora Cover
-                await interaction.response.edit_message(view=view_make(), embed=embed)
+                await edit_message(
+                    interaction=interaction,
+                    view=view_make(),
+                    embed=embed
+                )
 
         async def left_callback(interaction: discord.Interaction):
             self.curPage = max(self.curPage - 1, 1)
-            await interaction.response.edit_message(view=view_make())
+            await edit_message(
+                interaction=interaction,
+                view=view_make()
+            )
 
         async def right_callback(interaction: discord.Interaction):
             self.curPage = min(self.curPage + 1, pageLimit)
-            await interaction.response.edit_message(view=view_make())
+            await edit_message(
+                interaction=interaction,
+                view=view_make()
+            )
 
         async def page_callback(interaction: discord.Interaction):
-            await interaction.response.edit_message(content='Todo: 페이지 한번에 이동하기', view=view_make())
+            await edit_message(
+                interaction=interaction,
+                view=view_make()
+            )
         
         selects.callback = select_callback
         left.callback = left_callback
@@ -83,7 +102,11 @@ class lora(commands.Cog):
 
         embed=discord.Embed(title='Lora List', color=0x777777)
         embed.set_footer(text='@DavidChoi#6516')
-        await interaction.response.send_message(embed=embed, view=view_make())
+        await send_message(
+            interaction=interaction,
+            embed=embed,
+            view=view_make()
+        )
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(
