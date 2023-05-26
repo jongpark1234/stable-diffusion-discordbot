@@ -19,14 +19,15 @@ class DavidChoi(commands.Bot):
             'Cogs.set_model',
             'Cogs.lora',
             'Cogs.txt2img',
+            # 'Cogs.img2img',
             'Cogs.test'
         ]
         
     async def setup_hook(self):
         for extension in self.inital_extension:
             await self.load_extension(extension)
-        for guild in GUILDLIST:
-            await bot.tree.sync(guild=guild)
+        # for guild in GUILDLIST:
+        await bot.tree.sync()
 
     async def on_ready(self):
         print('Logged In.')

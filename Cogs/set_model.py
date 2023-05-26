@@ -11,12 +11,11 @@ from Functions.send_message import send_message
 from Functions.edit_message import edit_message
 from Functions.edit_original_response import edit_original_response
 
-is_selected = {}
-
 class set_model(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.curPage = 1
+        self.selected = {}
 
     def generateSelector(self, fileList: list[str], fileSize: int) -> list[discord.SelectOption]:
         return [
@@ -29,8 +28,7 @@ class set_model(commands.Cog):
     @discord.app_commands.command(name='set-model')
     async def set_model(self, interaction: discord.Interaction):
         '''Change Model.'''
-        global is_selected
-        is_selected[interaction.user.id] = False
+        self.selected[interaction.user.id] = False
         modelList = json.loads(requests.get(url=f'{APIURL}/sdapi/v1/sd-models').text)
         modelCount = len(modelList)
         pageLimit = math.ceil(modelCount / 25)
@@ -44,14 +42,13 @@ class set_model(commands.Cog):
         cancel = Button(label='X', style=ButtonStyle.red)
         
         async def select_callback(interaction : discord.Interaction):
-            global is_selected
-            is_selected[interaction.user.id] = ''.join(selects.values)
-            embed=discord.Embed(title=f"{is_selected[interaction.user.id]}", color=0x4fff4a)
-            embed.set_author(name=f'{is_selected[interaction.user.id]} 모델로 바꿀까요?')
+            self.selected[interaction.user.id] = ''.join(selects.values)
+            embed=discord.Embed(title=f"{self.selected[interaction.user.id]}", color=0x4fff4a)
+            embed.set_author(name=f'{self.selected[interaction.user.id]} 모델로 바꿀까요?')
             embed.set_footer(text='@DavidChoi#6516')
             try:
-                modelCover = discord.File(f"{MODELPATH}\\{is_selected[interaction.user.id]}.png", filename=f"{is_selected[interaction.user.id]}.png")
-                embed.set_image(url=f"attachment://{is_selected[interaction.user.id]}.png")
+                modelCover = discord.File(f"{MODELPATH}\\{self.selected[interaction.user.id]}.png", filename=f"{self.selected[interaction.user.id]}.png")
+                embed.set_image(url=f"attachment://{self.selected[interaction.user.id]}.png")
                 await edit_message(
                     interaction=interaction,
                     embed=embed,
@@ -81,15 +78,14 @@ class set_model(commands.Cog):
             )
 
         async def page_callback(interaction: discord.Interaction):
-            global is_selected
-            is_selected[interaction.user.id] = False
+            self.selected[interaction.user.id] = False
             await edit_message(
                 interaction=interaction,
                 view=view_make()
             )
 
         async def approve_callback(interaction: discord.Interaction):
-            embed = discord.Embed(title=f'**{is_selected[interaction.user.id]}** 모델로 설정합니다.', color=0x777777)
+            embed = discord.Embed(title=f'**{self.selected[interaction.user.id]}** 모델로 설정합니다.', color=0x777777)
             embed.set_footer(text='@DavidChoi#6516')
             await edit_message(
                 interaction=interaction,
@@ -103,16 +99,16 @@ class set_model(commands.Cog):
 
             for i in range(userCount):
                 if interaction.user.id == json_data['users'][i]['userid']:
-                    json_data['users'][i]['model'] = is_selected[interaction.user.id]
+                    json_data['users'][i]['model'] = self.selected[interaction.user.id]
                     break
             else:
                 json_data['users'].append({
                     'userid': interaction.user.id,
-                    'model': is_selected[interaction.user.id]
+                    'model': self.selected[interaction.user.id]
                 })
             
             json.dump(json_data, open(JSONPATH, 'w'), indent=4)
-            is_selected.pop(interaction.user.id)
+            self.selected.pop(interaction.user.id)
 
         async def cancel_callback(interaction : discord.Interaction):
             embed=discord.Embed(title=f'모델 변경을 취소했어요.', color=0xca474c)
@@ -136,7 +132,7 @@ class set_model(commands.Cog):
 
             left.disabled = self.curPage == 1
             right.disabled = self.curPage == pageLimit
-            approve.disabled = is_selected[interaction.user.id] == False
+            approve.disabled = self.selected[interaction.user.id] == False
             page.label = f'{self.curPage} / {pageLimit}'
 
             selects.options = self.generateSelector(modelList, modelCount)
@@ -148,11 +144,12 @@ class set_model(commands.Cog):
 
         embed=discord.Embed(title='아래 선택 메뉴에서 모델을 골라 주세요', color=0x777777)
         embed.set_footer(text='@DavidChoi#6516')
-        await send_message(
+        if not await send_message(
             interaction=interaction,
             embed=embed,
             view=view_make()
-        )
+        ):
+            return
 
 
 async def setup(bot: commands.Bot):

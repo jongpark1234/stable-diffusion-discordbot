@@ -102,11 +102,12 @@ class lora(commands.Cog):
 
         embed=discord.Embed(title='Lora List', color=0x777777)
         embed.set_footer(text='@DavidChoi#6516')
-        await send_message(
+        if not await send_message(
             interaction=interaction,
             embed=embed,
             view=view_make()
-        )
+        ):
+            return
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(

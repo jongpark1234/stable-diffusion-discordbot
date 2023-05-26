@@ -14,14 +14,14 @@ from Functions.edit_original_response import edit_original_response
 from Functions.send_message import send_message
 import Variables.queue as Q
 
-class txt2img(commands.Cog):
+class img2img(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.imgSuccess = False
         self.isDrawing = False
         self.imgResult: requests.Response = None
     
-    @discord.app_commands.command(name='txt2img')
+    @discord.app_commands.command(name='img2img')
     @discord.app_commands.choices(
         sampler=[discord.app_commands.Choice(name=i, value=i) for i in SAMPLERLIST]
     )
@@ -37,7 +37,7 @@ class txt2img(commands.Cog):
         seed: int=-1,
         hires_toggle: bool=True
     ):
-        '''텍스트를 그림으로 만들어 줍니다.
+        '''이미지를 다른 이미지로 재창조해줍니다.
 
         Args
         ----------
@@ -205,22 +205,25 @@ class txt2img(commands.Cog):
                 view=view
             )
 
-        if not await loadModel(): # Load a model.
-            await send_message(
-                interaction=interaction,
-                content='/set-model please.'
-            )
-            return
-        if not await send_message(interaction=interaction, content='대기중..'):
-            return
-        await waiting()
-        await process()
-        await sendImage(await saveImage())
+        # if not await loadModel(): # Load a model.
+        #     await send_message(
+        #         interaction=interaction,
+        #         content='/set-model please.'
+        #     )
+        #     return
+        # if not await send_message(interaction=interaction, content='대기중..'):
+        #     return
+        # await waiting()
+        # await process()
+        # await sendImage(await saveImage())
+
+        channel = interaction.user. create_dm()
+        await channel.send('asasd')
 
         self.isDrawing = False
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(
-        txt2img(bot),
-        guilds=GUILDLIST
+        img2img(bot),
+        # guilds=GUILDLIST
     )
