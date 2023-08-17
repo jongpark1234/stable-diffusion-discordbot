@@ -133,6 +133,13 @@ class txt2img(commands.Cog):
             await displayProgress
             
         async def saveImage():
+            # Time Parsing for Filename
+            time = str(datetime.datetime.now()).split()
+            year, month, day = time[0].split('-')
+            hour, minute, second = time[1].split('.')[0].split(':')
+
+            imageName = year + month + day + hour + minute + second + '.png'
+
             for i in self.imgResult.json()['images']:
                 image = Image.open(io.BytesIO(base64.b64decode(i.split(',', 1)[0])))
 
@@ -152,7 +159,7 @@ class txt2img(commands.Cog):
                 )
 
                 image.save(
-                    f'images/{str(datetime.datetime.now())}.png'.replace(' ', ''), 'png'
+                    f'{OUTPUTSTOREPATH}\\{imageName}'.replace(' ', ''), 'png'
                 )
 
             return png_info['info'].split('\n')[2]
