@@ -112,5 +112,4 @@ class lora(commands.Cog):
 async def setup(bot: commands.Bot):
     await bot.add_cog(
         lora(bot),
-        guilds=GUILDLIST
     )

@@ -151,6 +151,14 @@ class txt2img(commands.Cog):
                     )
                 )
 
+                image.save(
+                    f'{OUTPUTSTOREPATH}\\{str(datetime.datetime.now())}.png',
+                    pnginfo=PngImagePlugin.PngInfo().add_text(
+                        key='parameters',
+                        value=png_info.get('info')
+                    )
+                )
+
             return png_info['info'].split('\n')[2]
 
         async def sendImage(exif: list[str]):
@@ -222,5 +230,4 @@ class txt2img(commands.Cog):
 async def setup(bot: commands.Bot):
     await bot.add_cog(
         txt2img(bot),
-        guilds=GUILDLIST
     )

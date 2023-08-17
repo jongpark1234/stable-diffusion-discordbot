@@ -28,5 +28,4 @@ class get_options(commands.Cog):
 async def setup(bot: commands.Bot):
     await bot.add_cog(
         get_options(bot),
-        guilds=GUILDLIST
     )

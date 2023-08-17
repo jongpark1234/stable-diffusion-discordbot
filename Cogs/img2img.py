@@ -225,5 +225,4 @@ class img2img(commands.Cog):
 async def setup(bot: commands.Bot):
     await bot.add_cog(
         img2img(bot),
-        # guilds=GUILDLIST
     )

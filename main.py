@@ -26,7 +26,6 @@ class DavidChoi(commands.Bot):
     async def setup_hook(self):
         for extension in self.inital_extension:
             await self.load_extension(extension)
-        # for guild in GUILDLIST:
         await bot.tree.sync()
 
     async def on_ready(self):
