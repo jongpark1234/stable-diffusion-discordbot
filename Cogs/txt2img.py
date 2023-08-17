@@ -152,11 +152,7 @@ class txt2img(commands.Cog):
                 )
 
                 image.save(
-                    f'{OUTPUTSTOREPATH}\\{str(datetime.datetime.now())}.png'.replace(' ', ''),
-                    pnginfo=PngImagePlugin.PngInfo().add_text(
-                        key='parameters',
-                        value=png_info.get('info')
-                    )
+                    f'images/{str(datetime.datetime.now())}.png'.replace(' ', ''), 'png'
                 )
 
             return png_info['info'].split('\n')[2]

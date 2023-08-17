@@ -4,6 +4,9 @@ __pycache__
 # output image file
 output.png
 
+# output storing folder
+images
+
 # basic settings, configs, environment variables
 config.py
 user.json
