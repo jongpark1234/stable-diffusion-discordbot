@@ -30,8 +30,8 @@ class txt2img(commands.Cog):
         interaction: discord.Interaction,
         prompt: str,
         negative_prompt: str='EasyNegative, extra fingers, fewer fingers, NSFW',
-        width: discord.app_commands.Range[int, 64, 1024]=512,
-        height: discord.app_commands.Range[int, 64, 1024]=768,
+        width: discord.app_commands.Range[int, 64, 1024]=384,
+        height: discord.app_commands.Range[int, 64, 1024]=512,
         steps: discord.app_commands.Range[int, 10, 70]=40,
         sampler: discord.app_commands.Choice[str]='DPM++ SDE Karras',
         seed: int=-1,
@@ -60,7 +60,7 @@ class txt2img(commands.Cog):
         '''
         payload = {
             'enable_hr': hires_toggle,
-            'denoising_strength': 0.4,
+            'denoising_strength': 0.5,
             'hr_scale': 2,
             'hr_second_pass_steps': 20,
             'firstphase_width': 0,

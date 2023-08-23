@@ -6,7 +6,7 @@ from config import *
 class DavidChoi(commands.Bot):
     def __init__(self):
         super().__init__(
-            command_prefix='.',
+            command_prefix='JongPark',
             intents=discord.Intents.all(),
             sync_command=True,
             application_id=APPID
